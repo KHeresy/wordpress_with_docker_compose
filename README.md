@@ -1,5 +1,7 @@
 # WordPress Docker
 
+使用 DOcker Compose 建立 NGINX + wordpress:fpm + MySQL 的系統
+
 ## 使用方法
 
 1. 修改 `./docker/.env` 裡面的 MySQL 帳號密碼
