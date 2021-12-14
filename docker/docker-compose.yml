@@ -1,38 +1,43 @@
-version: '2.4'
+version: '3.0'
 
 services:
-  db:
-     image: mysql:8.0.20
-     container_name: db
-     volumes:
-        - ../db_data:/var/lib/mysql
-        - ./config/my.cnf:/etc/mysql/my.cnf
-     restart: always
-     environment:
-       MYSQL_ROOT_PASSWORD: ${MYSQL_ROOT_PASSWORD}
-       MYSQL_DATABASE: wordpress
-       MYSQL_USER: ${MYSQL_USER}
-       MYSQL_PASSWORD: ${MYSQL_PASSWORD}
+  heresy_db:
+    image: mysql:latest
+    container_name: heresy_db
+    volumes:
+       - ../db_data:/var/lib/mysql
+       - ../db_dump:/backup
+       - ./config/my.cnf:/etc/mysql/my.cnf
+    restart: always
+    environment:
+      MYSQL_ROOT_PASSWORD: ${MYSQL_ROOT_PASSWORD}
+      MYSQL_DATABASE: wordpress
+      MYSQL_USER: ${MYSQL_USER}
+      MYSQL_PASSWORD: ${MYSQL_PASSWORD}
+    networks:
+      - wordpress_network
 
-  wordpress:
-     depends_on:
-       - db
-     image: wordpress:php7.4-fpm-alpine
-     container_name: wordpress
-     volumes:
-       - ./config:/usr/local/etc/php/conf.d/uploads.ini
-       - ../wordpress:/var/www/html
-     restart: always
-     environment:
-       WORDPRESS_DB_HOST: db:3306
-       WORDPRESS_DB_USER: ${MYSQL_USER}
-       WORDPRESS_DB_PASSWORD: ${MYSQL_PASSWORD}
-  
-  webserver:
+  heresy_wordpress:
     depends_on:
-      - wordpress
+      - heresy_db
+    image: wordpress:fpm-alpine
+    container_name: heresy_wordpress
+    volumes:
+      - ./config/uploads.ini:/usr/local/etc/php/conf.d/uploads.ini
+      - ../wordpress:/var/www/html
+    restart: always
+    environment:
+      WORDPRESS_DB_HOST: heresy_db:3306
+      WORDPRESS_DB_USER: ${MYSQL_USER}
+      WORDPRESS_DB_PASSWORD: ${MYSQL_PASSWORD}
+    networks:
+      - wordpress_network
+
+  heresy_webserver:
+    depends_on:
+      - heresy_wordpress
     image: nginx:latest
-    container_name: webserver
+    container_name: heresy_web
     restart: always
     environment:
       - TZ=Asia/Taipei
@@ -42,5 +47,11 @@ services:
     volumes:
       - ../logs:/var/log/nginx
       - ../nginx:/etc/nginx/conf.d
-      - ../wordpress:/var/www/html      
       - ../nginx:/etc/nginx/ssl
+      - ../wordpress:/var/www/html
+    networks:
+      - wordpress_network
+
+networks:
+  wordpress_network:
+    driver: bridge
